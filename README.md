@@ -11,5 +11,4 @@
 - Put high threads/tasks for maximum impact
 - Webhook must be valid
 
-**Preview**
 <img src="https://media.discordapp.net/attachments/884489204577488897/918204547304943716/unknown.png?width=789&height=483"/>
