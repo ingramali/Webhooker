@@ -1,113 +1,95 @@
-import os
-import logging
-import secrets
 import asyncio
 import aiohttp
+import logging
+import secrets
+import os
 
 from tasksio import TaskPool
 
-os.system('clear')
-
+if os.name == "posix":
+    os.system("clear")
+else:
+    os.system("cls")
+    
 logging.basicConfig(
     level=logging.INFO, 
-    format="%(asctime)s %(message)s", 
-    datefmt=f"\t\u001b[38;5;203m[\u001b[38;5;255m%I:%M:%S\u001b[38;5;203m]\u001b[38;5;255m"
+    format="\x1b[38;5;226m[\x1b[0m%(asctime)s\x1b[38;5;226m] \x1b[0m| \x1b[38;5;226m%(message)s", 
+    datefmt="%I:%M:%S"
 )
 
-pink = "\u001b[38;5;198m"
-red = "\u001b[38;5;203m"
-reset = "\u001b[38;5;255m"
+class Webhooker(object):
 
-class Webhooker:
+    def __init__(self):
+        self.colors = {
+            "light_yellow": "\x1b[38;5;226m",
+            "soft_orange": "\x1b[38;5;215m",
+            "skin_color": "\x1b[38;5;216m",
+            "reset": "\x1b[0m"
+        }
 
-    def __init__(self, debug: bool):
-        self.debug = debug
-        self._banner = """
-\t\t\u001b[38;5;203m██╗    ██╗███████╗██████╗ ██╗  ██╗ ██████╗  ██████╗ ██╗  ██╗███████╗██████╗
-\t\t\u001b[38;5;203m██║    ██║██╔════╝██╔══██╗██║  ██║██╔═══██╗██╔═══██╗██║ ██╔╝██╔════╝██╔══██╗
-\t\t\u001b[38;5;203m██║ █╗ ██║█████╗  ██████╔╝███████║██║   ██║██║   ██║█████╔╝ █████╗  ██████╔╝
-\t\t\u001b[38;5;203m██║███╗██║██╔══╝  ██╔══██╗██╔══██║██║   ██║██║   ██║██╔═██╗ ██╔══╝  ██╔══██╗
-\t\t\u001b[38;5;203m╚███╔███╔╝███████╗██████╔╝██║  ██║╚██████╔╝╚██████╔╝██║  ██╗███████╗██║  ██║
-\t\t\u001b[38;5;203m ╚══╝╚══╝ ╚══════╝╚═════╝ ╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
+        self.banner = """
+{}╦ ╦╔═╗╔╗ ╦ ╦╔═╗╔═╗╦╔═╔═╗╦═╗
+{}║║║║╣ ╠╩╗╠═╣║ ║║ ║╠╩╗║╣ ╠╦╝
+{}╚╩╝╚═╝╚═╝╩ ╩╚═╝╚═╝╩ ╩╚═╝╩╚═
+        """.format("\x1b[38;5;214m", self.colors["soft_orange"], self.colors["skin_color"])
 
-        """
-
-    async def webhook_flood(self, webhook: str, amount: int, message: str, name: str):
+    async def webhook_flood(self, webhook: str):
         async with aiohttp.ClientSession() as session:
-            for i in range(amount):
-                async with session.post(webhook, json={"content": "%s -> `%s`" % (message, secrets.token_hex(16)), "username": "%s -> %s" % (name, secrets.token_urlsafe(8))}) as r:
-                    if r.status == 204:
-                        logging.info("%s-> %sSent New Message %s-> %s%s" % (reset, red, reset, red, i+1))
-                    else:
-                        logging.error("%s-> %sRatelimited" % (reset, red))
-            input()
-            exit()
-
-    async def webhook_delete(self, webhook: str):
-        async with aiohttp.ClientSession() as session:
-            async with session.delete(webhook) as r:
-                if r.status == 204:
-                    logging.info("-> Succesfully Deleted")
-                    input()
-                    exit()
+            async with session.post(webhook, json={"content": "`{}`".format(secrets.token_hex(16)), "username": "{}".format(secrets.token_urlsafe(8))}) as response:
+                if response.status == 204:
+                    logging.info("Sent new message")
                 else:
-                    logging.error("-> Failed to delete Webhook")
-                    input()
-                    exit()
-
-    async def webhook_spam(self, webhook: str, amount: int, message: str, name: str):
+                    logging.error("Ratelimited")
+    
+    async def webhook_spam(self, message: str, username: str, webhook: str):
         async with aiohttp.ClientSession() as session:
-            for i in range(amount):
-                async with session.post(webhook, json={"content": message, "username": name}) as r:
-                    if r.status == 204:
-                        logging.info("%s-> %sSent New Message %s-> %s%s" % (reset, red, reset, red, i+1))
+            async with session.post(webhook, json={"content": message, "username": username}) as response:
+                if response.status == 204:
+                    logging.info("Sent new message")
+                else:
+                    logging.error("Ratelimited")
+
+    async def user_interface(self):
+        async with aiohttp.ClientSession() as session:
+            print(self.banner)
+            print("""
+{}[{}1{}] {}Flood Webhook {}({}Spam webhook with randomized usernames and messages{})
+{}[{}2{}] {}Delete Webhook {}({}Deletes given webhook{})
+{}[{}3{}] {}Spam Webhook {}({}Spams webhook with given username and message{})
+            """.format(self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"]))
+            commands = input("{}[{}\033[4mscripted@onTop\033[0m{}]\033[0m {}Your Choice{}:{} ".format(self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"]))
+            if commands == "1":
+                webhook = input("{}[{}\033[4mscripted@onTop\033[0m{}]\033[0m {}Webhook{}:{} ".format(self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"]))
+                
+                amount = int(input("{}[{}\033[4mscripted@onTop\033[0m{}]\033[0m {}Amount{}:{} ".format(self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"])))
+                tasks = int(input("{}[{}\033[4mscripted@onTop\033[0m{}]\033[0m {}Tasks{}:{} ".format(self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"])))
+                print()
+                async with TaskPool(tasks) as pool:
+                    for i in range(amount):
+                        await pool.put(self.webhook_flood(webhook))
+
+            elif commands == "2":
+                webhook = input("{}[{}\033[4mscripted@onTop\033[0m{}]\033[0m {}Webhook{}:{} ".format(self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"]))
+                async with session.delete(webhook) as response:
+                    if response.status == 204:
+                        logging.info("Succesfully deleted webhook")
+                        input()
                     else:
-                        logging.error("%s-> %sRatelimited" % (reset, red))
-            input()
-            exit()
+                        logging.error("Failed to delete webhook for unknown reasons")
+                        input()
 
-    async def start(self):
-        print(self._banner)
-        logging.info("%s-> %s\"%sflood%s\"%s  : %sFloods Webhook with Multiple & Randomized Usernames." % (reset, reset, red, reset, reset, red))
-        logging.info("%s-> %s\"%sdelete%s\"%s : %sDeletes given Webhook." % (reset, reset, red, reset, reset, red))
-        logging.info("%s-> %s\"%sspam%s\"%s   : %sSpams Webhook with given username and message." % (reset, reset, red, reset, reset, red))
-        print()
-        choice = input("\t%s[%s?%s] %sYour Choice%s: %s" % (red, reset, red, reset, red, reset))
-        if choice == "flood":
-            webhook = input("\t%s[%s?%s] %sWebhook%s: %s" % (red, reset, red, reset, red, reset))
-            amount = int(input("\t%s[%s?%s] %sAmount%s: %s" % (red, reset, red, reset, red, reset)))
-            message = input("\t%s[%s?%s] %sMessage%s: %s" % (red, reset, red, reset, red, reset))
-            name = input("\t%s[%s?%s] %sName%s: %s" % (red, reset, red, reset, red, reset))
-            threads = int(input("\t%s[%s?%s] %sThreads [high = faster]%s: %s" % (red, reset, red, reset, red, reset)))
-            print()
-            async with TaskPool(threads) as pool:
-                for i in range(amount):
-                    await pool.put(self.webhook_flood(webhook, amount, message, name))
-        elif choice == "delete":
-            webhook = input("\t%s[%s?%s] %sWebhook%s: %s" % (red, reset, red, reset, red, reset))
-            print()
-            async with TaskPool(9000) as pool:
-                for i in range(amount):
-                    await pool.put(self.webhook_delete(webhook))
-        elif choice == "spam":
-            webhook = input("\t%s[%s?%s] %sWebhook%s: %s" % (red, reset, red, reset, red, reset))
-            amount = int(input("\t%s[%s?%s] %sAmount%s: %s" % (red, reset, red, reset, red, reset)))
-            message = input("\t%s[%s?%s] %sMessage%s: %s" % (red, reset, red, reset, red, reset))
-            name = input("\t%s[%s?%s] %sName%s: %s" % (red, reset, red, reset, red, reset))
-            threads = int(input("\t%s[%s?%s] %sThreads [high = faster]%s: %s" % (red, reset, red, reset, red, reset)))
-            print()
-            async with TaskPool(threads) as pool:
-                for i in range(amount):
-                    await pool.put(self.webhook_spam(webhook, amount, message, name))
-
+            elif commands == "3":
+                webhook = input("{}[{}\033[4mscripted@onTop\033[0m{}]\033[0m {}Webhook{}:{} ".format(self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"]))
+                message = input("{}[{}\033[4mscripted@onTop\033[0m{}]\033[0m {}Message{}:{} ".format(self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"]))
+                username = input("{}[{}\033[4mscripted@onTop\033[0m{}]\033[0m {}Username{}:{} ".format(self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"]))
+                
+                amount = int(input("{}[{}\033[4mscripted@onTop\033[0m{}]\033[0m {}Amount{}:{} ".format(self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"])))
+                tasks = int(input("{}[{}\033[4mscripted@onTop\033[0m{}]\033[0m {}Tasks{}:{} ".format(self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"], self.colors["light_yellow"], self.colors["reset"])))
+                print()
+                async with TaskPool(tasks) as pool:
+                    for i in range(amount):
+                        await pool.put(self.webhook_spam(message, username, webhook))
+            
 if __name__ == "__main__":
-    client = Webhooker(
-        debug=False
-    )
-    try:
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(client.start())
-    except Exception:
-        print("Tasks Finished..")
-        input()
-        exit()
+    client = Webhooker()
+    asyncio.run(client.user_interface())
